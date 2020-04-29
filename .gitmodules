@@ -1,0 +1,3 @@
+[submodule "pakala"]
+	path = pakala
+	url = https://github.com/palkeo/pakala
