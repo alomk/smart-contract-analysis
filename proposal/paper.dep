@@ -1,0 +1,4 @@
+paper.dep: Makefile  paper.tex abstract.tex foundations.tex approach.tex conclusion.tex biblio.bib
+paper.aux:  paper.tex abstract.tex foundations.tex approach.tex conclusion.tex
+paper.bbl:  paper.tex abstract.tex foundations.tex approach.tex conclusion.tex biblio.bib
+paper.pdf: paper.bbl

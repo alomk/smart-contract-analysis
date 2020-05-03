@@ -1,0 +1,33 @@
+\section{Foundations}
+Blockchain technology's greatest strength is allowing the decentralization of historically centralized services.
+Bitcoin~\cite{bitcoin} has a market cap of almost \$200 billion and sees a daily trading volume of about \$100 billion. 
+Besides Bitcoin, there are countless other "alt-coins" that each have their own platform and offer a type of service.
+Ethereum~\cite{ethereum} is one platform that allows digital assets be directly controlled by a piece of code called a smart contract.
+Smart contracts essentially allow systems that automatically move digital assets according to pre-defined rules.
+Decentralized autonomous organizations (DAOs) are long-term smart contracts that are controlled by shareholders.
+The DAO~\cite{dao}, a crowdfunded venture capital fund that existed as a smart contract, had over \$50 million stolen due to an exploited bug in the smart contract language Solidity.
+In fact, this incident is the reason why Ethereum was hard-forked and why we see another alt coin "Ethereum Classic".
+Other high profile smart contracts have also been targeted and lost their funds to these types of attacks.
+As the usage of smart contracts becomes more prevalent, it is critical to address bugs in smart contract implementations and in Solidity itself.
+
+Smart contract vulnerabilities can be classified~\cite{vulnerabilities} as blockchain vulnerabilities, Solidity vulnerabilities, and software security vulnerabilities.
+The Transaction Ordering Dependency problem is one blockchain vulnerability which involves a new block on the chain containing multiple transactions invoking the same contract.
+There is no certainty in the state of the contract when either individual transaction invokes the contract because the order is not known until after the block is mined.
+The Timestamp dependency problem says that a smart contract using timestamps of blocks can potentially be manipulated by malicious miners who modify their local system's time.
+
+Solidity compiler vulnerabilities are bugs within the smart contract's high level language and how it generates the Ethereum Virtual Machine (EVM) bytecode.
+There have not been many CVE's published on this which makes the EVM an excellent candidate for fuzzing.
+
+Software security vulnerabilities are those due to erroneus smart contract code and improper Solidity practice.
+The DAO attack was victim to a re-entrancing attack where the contract uses an unsafe function call.value() that allows the attacker to take advantage of a callback to recursively withdraw funds from a victim contract.
+Other usual security vulnerabilities such as buffer overruns and integer over/underflows also fall under software bugs.
+
+The parity multisig attack was one incident where \$50 million of Ethereum was frozen due to an attacker calling an unprotected function and gaining ownership of a public smart contract library that was imported by other contracts.
+The attacker invoked the kill function that removed the contract from the blockchain.
+This could have been mitigated by using a private modifier on the function that allowed the attacker to escalate privileges.
+
+Ethereum smart contracts rely on "gas", which is additional transaction fee paid to the miner for borrowing their computation ability on the blockchain.
+If this gas runs out before an operation is over, the callee contract throws an exception and these must be properly checked by the caller contract.
+This applys to all other exceptions that can be raised such as when exceeding stack capacity, or any other unknown system error occurs.
+These also fall under software security vulnerabilities that can be mitigated by safe code practice.
+

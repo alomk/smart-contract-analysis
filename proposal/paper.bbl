@@ -1,0 +1,41 @@
+\begin{thebibliography}{1}
+
+\bibitem{ethereum}
+V.~Buterin.
+\newblock Ethereum white paper: A next generation smart contract \&
+  decentralized application platform.
+\newblock 2008.
+\newblock ``[Online; accessed 5-April-2020]''.
+
+\bibitem{etherscan}
+Etherscan.
+\newblock Etherscan.
+\newblock \url{https://etherscan.io/aboutus}, 2015.
+\newblock [Online; accessed 6-April-2020].
+
+\bibitem{dao}
+A.~Madeira.
+\newblock The dao, the hack, the soft fork and the hard fork.
+\newblock 2019.
+\newblock ``[Online; accessed 5-April-2020]''.
+
+\bibitem{bitcoin}
+S.~Nakamoto.
+\newblock Bitcoin: A peer-to-peer electronic cash system.
+\newblock 2008.
+\newblock ``[Online; accessed 5-April-2020]''.
+
+\bibitem{manticore}
+T.~of~Bits.
+\newblock Manticore.
+\newblock \url{https://github.com/trailofbits/manticore}, 2019.
+\newblock [Online; accessed 6-April-2020].
+
+\bibitem{vulnerabilities}
+P.~Praitheeshan, L.~Pan, J.~Yu, J.~Liu, and R.~Doss.
+\newblock Security analysis methods on ethereum smart contract vulnerabilities
+  — a survey.
+\newblock 2020.
+\newblock ``[Online; accessed 5-April-2020]''.
+
+\end{thebibliography}

@@ -1,0 +1,17 @@
+someone look at the ethereum virtual machine (EVM) implementation and how solidity is implemented at the assembly level
+    catch up on solidity revisions and what the most recent bugs were
+    solc compiler exploit?
+
+someone look at things like re-entrancy problem
+    e.g. use of kill
+
+manticore will hopefully find software security issues
+    buffer overflows
+    integer over/underflow
+    
+two devastating attacks: "the DAO" and "parity multisig" where millions of usd were lost could have been mitigated if the implementors of the contracts properly used solidity (calling address.transfer or address.send + private modifier on external library functions)
+https://arxiv.org/pdf/1907.03890.pdf
+https://arxiv.org/pdf/1806.01143.pdf
+https://arxiv.org/pdf/1908.08605.pdf
+https://security.cse.iitk.ac.in/sites/default/files/17111011.pdf
+

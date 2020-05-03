@@ -1,0 +1,63 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{color}
+\usepackage{tabularx}
+\usepackage{environ}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{xspace}
+\usepackage[hyphens]{url} % hyphens enables line breaks on hyphens which makes the bib sane
+\usepackage{listings}
+\usepackage{algorithm2e}
+\usepackage{filecontents}
+\usepackage{pgfplots, pgfplotstable}
+\usepackage{adjustbox}
+\usepackage{multirow}
+\usepackage{fontspec}
+\usepackage{caption}
+\usepackage{footmisc}
+\usepackage{balance}
+\usepackage{dblfloatfix}
+%\usepackage{authblk}
+
+%\usepackage{draftwatermark}
+%\SetWatermarkText{Draft: \\ Do Not Circulate}
+%\SetWatermarkScale{0.5}
+
+\usepgfplotslibrary{statistics}
+
+\begin{document}
+
+\title{Proposal: Ethereum Smart Contract Security}
+
+\author{
+\IEEEauthorblockN{
+    Kazi Alom, 
+    Lay Jain, 
+Srijon Mukherjee
+}
+}
+
+\maketitle
+
+\input{abstract}
+
+\begin{IEEEkeywords}
+    security analysis, ethereum, smart contract
+\end{IEEEkeywords}
+
+\input{foundations} 
+\input{approach}   
+\input{conclusion} 
+
+\bibliographystyle{abbrv}
+\balance
+\bibliography{biblio}
+
+\end{document}
