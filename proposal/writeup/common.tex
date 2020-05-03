@@ -1,0 +1,207 @@
+\section{Common Vulnerabilities}
+As mentioned, there exist a variety of smart contract weaknesses~\cite{swc} due to software errors, EVM exceptions, blockchain errors, etc.
+It helps to look at some Solidity code examples and understand how exactly the exploits would be triggered.
+The following samples demonstrate vulnerabilities besides crypto implementation flaws, obsolete function usages, and typical programming malpractice.
+
+\textbf{Public access to critical private data:} When a contract uses the \code{private} modifier on a function or field, it does not mean that these variables cannot be read.
+Any attacker can look at the transactions related to this contract on the public blockchain to figure out the state of all variables.
+In the following example, an attacker can simply calculate what number they need to trigger \code{selectWinner} into transferring the contract balance to his address by first observing the value at \code{numbers[0]}.
+This would be seen the arguments to \code{play} in a previous transaction.
+One way to resolve this for a "game" like the contract below is to use a commitment scheme that hides values using hashes until both players have picked numbers.
+\begin{lstlisting}[basicstyle=\small]
+contract Test{
+ uint[2] private numbers;
+ address[2] private addrs;
+ uint idx = 0;
+
+ function play(uint number) public payable {
+     require(msg.value == 1 ether, 
+         'must be called with 1 ether');
+     numbers[idx] = number;
+     addrs[idx] = msg.sender;
+     idx++;
+     if (idx == 2) selectWinner();
+ }
+
+ function selectWinner() private {
+     uint n = (numbers[0] * numbers[1]) % 2;
+     (bool success,) = 
+      addrs[n].call.value(address(this).balance);
+     require(success, "transfer failed");
+     delete numbers;
+     delete addrs;
+     idx = 0;
+ }
+}
+\end{lstlisting}
+\textbf{DoS by uncontrolled gas consumption:} All smart contracts consume gas depending on how many instructions must be computed based on what function was called.
+This gas price and amount is specified in the transaction sent to the contract.
+Miners are incentivized by higher gas prices thus transactions with high gas prices are usually completed quicker.
+In Ethereum, the sum of all transactions in a block cannot exceed a gas limit threshold.
+If a contract like the one below maintains an array of unbound size, it can lead to a denial-of-service condition where the function that loops across the array's values may exceed the block gas limit.
+This means that it is critical that developers do not loop over arrays that are expected to grow over time.
+\begin{lstlisting}[basicstyle=\small]
+contract Test {
+    address[] addr_list;
+
+    function addAddress() public {
+        addr_list.push(msg.sender);
+    }
+
+    function transferAddresses() public payable {
+        for(uint i=0; i < addr_list.length; i++) {
+            // doing ANYTHING is a DOS risk
+        }
+    }
+}
+\end{lstlisting}
+\textbf{Arbitrary data write:} Similar to how in a standard buffer overflow an attacker can overwrite critical data such as a function return address, there exists a similar problem where anyone may overwrite the owner of a contract.
+This would then allow them to call privileged functions such as a withdrawal that validates the sender address of a transaction against the contract owner.
+Developers should ensure that there are no out-of-bounds accesses where writes to one data structure might corrupt another data structure in the address space.
+\begin{lstlisting}[basicstyle=\small]
+contract Test {
+    address public owner;
+    uint256[] map;
+
+    function Test() public {
+        owner = msg.sender;
+    }
+
+    function set(uint256 key, uint256 value) public {
+        map[key] = value;
+    }
+
+    function get(uint256 key) 
+        public view returns (uint256) {
+        return map[key];
+    }
+
+    function withdraw() public {
+        require(msg.sender == owner);
+        msg.sender.transfer(address(this).balance);
+    }
+}
+
+\end{lstlisting}
+\textbf{Insufficient entropy for random values:} One popular use of smart contracts may be in gambling applications, which typically rely on pseudorandom number generators to pick winners.
+Due to the state of a contract being public on the blockchain, having a source of randomness is nontrivial.
+For instance, relying on the timestamp as a random value does not work because a miner can arbitrarily set their local machine times.
+One way to solve this is to use a commitment scheme to commit a guess and answer before revealing.
+\begin{lstlisting}[basicstyle=\small]
+contract Test {
+  uint8 answer;
+
+  function init_challenge() public payable {
+      require(msg.value == 1 ether);
+      // hash(previous blocks hash | timestamp)
+      answer = uint8(keccak256(
+          block.blockhash(block.number - 1), now));
+  }
+
+  function guess(uint8 g) public payable{
+      require(msg.value == 1 ether);
+      
+      if (g == answer) {
+          msg.sender.transfer(address(this).balance);
+      }
+  }
+}
+\end{lstlisting}
+\textbf{Race condition:} By nature of being on a blockchain, some transactions that call the same contract may occur in the same block and thus their ordering depends on the miner who completes it.
+One simple example is if there was a contract that awarded tokens to the first person to guess a correct value.
+Let's say you figured out the answer and send your transaction onto the network.
+In the time it takes for the block to get mined, an adversary sees your transaction and copies the answer you found and sends their own transaction, except they provide a much higher gas value.
+Rational miners would complete the adversary's transaction before yours, letting the adversary win the money instead.
+To mitigate this situation, the contract can store the salted hash of the answer and then compare it against the salted hash of your guess.
+\begin{lstlisting}[basicstyle=\small]
+contract Test {
+    address public owner;
+    uint public prize;
+    bool finished;
+
+    function Test() public {
+        owner = msg.sender;
+        finished = false;
+    }
+
+    function setPrize() public payable {
+        require(!finished);
+        require(msg.sender == owner);
+        owner.transfer(prize);
+        prize = msg.value;
+    }
+
+    function claimPrize(uint guess) {
+        require(!finished);
+        require(guess == keccak256("secret"));
+        msg.sender.transfer(prize);
+        finished = true;
+    }
+}
+\end{lstlisting}
+\textbf{DoS through improper exception handling:} Contracts that perform external calls such as sending a payment to another address may be susceptible to a denial-of-service condition if this call occurs in a loop.
+In other words, it is bad to attempt multiple payments in one transaction because if one of them fails, the rest of the payments will not happen and the funds are effectively frozen until the exception somehow does not occur anymore.
+\begin{lstlisting}[basicstyle=\small]
+contract Test {
+ address[] refundAddresses;
+ mapping (address => uint) public refunds;
+
+ function Test() {
+  refundAddresses.push(0xdeadbeef); 
+  refundAddresses.push(0xd15ea5e);
+ }
+
+ function refundAll() public {
+  for (uint x; x < refundAddresses.length; x++) {
+  // exception on x=0 causes refundAddresses[1]
+  // to never get a refund
+      require(refundAddresses[x].send(
+         refunds[refundAddresses[x]]));
+  }
+ }
+}
+\end{lstlisting}
+\textbf{Integer under/overflow:} This type of vulnerability happens when an arithmetic operation results in a value greater than the maximum or smaller than the minimum for a specific type.
+For instance, trying to store $2^8$ in a \code{uint8} type would actually store a 0 because the value wraps around.
+This is mitigated by using a safe math library that checks for overflowing
+\begin{lstlisting}[basicstyle=\small]
+contract Test {
+    uint public number = 1;
+
+    function sub(uint guess) public {
+        number -= guess;
+    }
+}
+\end{lstlisting}
+\textbf{Unprotected self-destruct: } This is a simple improper access control vulnerabilitiy but it is significant because it is the reason why the parity multisig attack occurred.
+An attacker was able to escalate privileges and self-destruct a library imported by many other contracts freezing all the funds in those contracts.
+In order to defend against this vulnerability, a developer should implement proper access controls if needing this functionality at all.
+\begin{lstlisting}[basicstyle=\small]
+contract Test {
+    function suicide() {
+        selfdestruct(msg.sender);
+    }
+}
+\end{lstlisting}
+\textbf{Re-entrancy: } This is a relatively common and devastating attack where calling an external contract allows an attacker to take over control flow by recursively calling back into the contract before the initial call's appropriate state changes occur.
+The DAO attack was victim to re-entrancy where an attacker recursively withdrew funds using a single call.
+Similarly, in the example below, the condition that allows a caller to trigger a transfer depends on a state that is not changed until after the external call occurs.
+The \code{msg.sender.call.value(amount)} allows an attacker to specify a function they can call back into after the transfer happens but before the necessary state change.
+This vulnerability is mitigated by performing all of a contract's state changes before doing an external call.
+\begin{lstlisting}[basicstyle=\small]
+contract Test {
+    mapping (address => uint) public credit;
+
+    function donate(address to) payable public {
+        credit[to] += msg.value;
+    }
+
+    function withdraw(uint amount) public {
+        if (credit[msg.sender] >= amount) {
+            require(msg.sender.call.value(amount)());
+            // this state change occurs after call
+            credit[msg.sender] -= amount;
+        }
+    }
+}
+\end{lstlisting}

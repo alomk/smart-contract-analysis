@@ -1,0 +1,16 @@
+\section{Initial Approach}
+
+The current plan was to use Manticore~\cite{manticore}, a symbolic execution engine that supports EVM bytecode (and other architectures) to maximize code coverage on smart contracts sampled from Etherscan~\cite{etherscan}.
+Manticore can simulate the EVM as well as simulate an entire "Ethereum world" where a contract may call on other contracts.
+One advantage is that this analysis can be done without any real Ethereum coin because Manticore can set arbitrary amounts for contracts and wallets you define in the API.
+
+The objective was to identify devastating vulnerabilities we have seen before such as the re-entrancing attack on the DAO that allows an attacker to steal funds.
+Manticore would provide inputs that will hit various branches in smart contracts and the next step is to apply a fuzzer to user-controlled inputs in order to generate corner cases.
+In other words, we want to cause as many exceptions we can along every branch in the code and log them for further analysis.
+The collected smart contracts will also be analyzed for semantic bugs after reading up on the latest version of Solidity and recommended practice.
+
+One difficulty in the approach may be dealing with all the versions of Solidity being used in the wild.
+Solidity is constantly being patched which causes smart contract writers to be slow in keeping up.
+Manticore fully supports Solidity versions pre-0.5.0 so we will have to scrape contracts using Solidity 0.4 and older.
+
+
