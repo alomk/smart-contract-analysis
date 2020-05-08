@@ -9,6 +9,13 @@ manticore will hopefully find software security issues
     buffer overflows
     integer over/underflow
     
+    
+########## Author: Lay ##########
+
+Results: The Cd_Bank Exploit (Cannot check on mainnet)
+Honeypots: QuizContract (Hash), The Slides (Storage overwrite), Wrong Verification
+
+########## ----------- #########
 two devastating attacks: "the DAO" and "parity multisig" where millions of usd were lost could have been mitigated if the implementors of the contracts properly used solidity (calling address.transfer or address.send + private modifier on external library functions)
 https://arxiv.org/pdf/1907.03890.pdf
 https://arxiv.org/pdf/1806.01143.pdf
