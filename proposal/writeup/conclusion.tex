@@ -1,6 +1,21 @@
 \section{Conclusion}
-Ultimately, we hope to shed some light on the current unfortunate state of Ethereum smart contract security and potentially report bugs, making cryptocurrency a little safer.
-Next steps from here may be directly fuzzing the Solidity compiler with randomly generated smart contract code and also fuzzing the EVM runtime as previously mentioned.
+Although we could not exploit any vulnerable contracts, we lay the groundwork for assessing new contracts through a variety of open source tools.
+We would have initially fallen for honeypot traps if we had been careless and used Manticore to find vulnerabilities in verified source code.
+Pakala worked to find trivial bugs and vulnerabilities in bytecode by maximizing coverage and fuzzing inputs, but applying its results usefully was difficult due to a lack of EVM debugging capability.
+Echidna is a more precise fuzzing tool than Pakala that uses information from source code to find most of the common vulnerabilities discussed, but both tools lack the ability to find re-entrancy bugs.
+Slither can find re-entrancy bugs, but it has a high false positive rate and does not give concrete inputs to trigger such bugs.
+
+An important next step in the black box analysis of EVM bytecode is to develop a flexible debugger that can step through instructions and insert breakpoints where local memory and blockchain storage can be inspected.
+This would make it easy to universally analyze contracts the same as one would reverse engineer an x86 executable file.
+
+Clearly there are novel techniques consistently being innovated to analyze contracts where some are advantageous over others in certain cases and vice versa.
+These tools can be leveraged by developers to test their smart contracts before initializing them on the blockchain, but in practice it is recommended to instead use a method called "formal verification" as in the tool Securify~\cite{securify}.
+We could not analyze with Securify because it is a proprietary software.
+Furthermore, formal verification is a tedious and expensive process as it requires manually writing specifications for the contracts to be tested.
+The alternative to formal verification for writing secure smart contract code is to use open source~\cite{openzeppelin} libraries of contracts thoroughly vetted by the community.
+For instance, you may copy from a library that provides safe math functions where integer overflows are prevented.
+Regardless, vulnerabilities in open source libraries would compromise all the contracts that inherit from them.
+
 
 
 

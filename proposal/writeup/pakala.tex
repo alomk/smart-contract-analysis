@@ -1,1 +1,115 @@
 \section{Mass Scanning with Pakala}
+To prepare for the mass scanning of smart contracts on the blockchain, we have to extract all the contract bytecodes.
+One way to do this would have been to run a local Ethereum node and wait for it to synchronize with the rest of the mining network.
+This would have meant waiting for it to download nearly 60 GB of data and then parse through all of it.
+Fortunately, there are public Google Cloud datasets for many popular cryptocurrencies including Ethereum.
+We decided to extract and scan contracts that have non zero balances using the following SQL query: 
+\begin{lstlisting}[language=SQL, basicstyle=\small]
+Select A.*, B.eth_balance 
+from 'bigquery-public-data.crypto_ethereum.contracts' 
+A inner join 
+'bigquery-public-data.crypto_ethereum.balances' 
+B on A.address = B.address where B.eth_balance > 0
+\end{lstlisting}
+This query returned $473594$ smart contracts with non-zero balance which ended up being about 2 GB worth of JSON.
+
+One complication with using Pakala is that it requires a URL to an Ethereum node so it can perform necessary RPC functions for retrieving the state of a contract on the blockchain.
+Initially, this was handled by running the Parity~\cite{parity} mining software and using its local URL for Pakala.
+This was unsustainable because the machines running the scanners would run out of disk space trying to download the entire blockchain.
+After switching over to a third party node Infura~\cite{infura}, the scanners were able to call the RPCs over the internet to the remote nodes.
+The downside was that Infura limits free accounts to under 100000 requests a day.
+
+The next step was to set up a python script that can spawn instances of Pakala to scan a contract.
+By running the command 
+\code{echo "0xdeadbeef" | pakala - --exec-time 30 --analysis-time 30 --max-transaction-depth 5 -z}, 
+we can feed in arbitrary EVM bytecode through \code{stdin} and specify timeouts in seconds for the analysis and fuzzing.
+We limit the transaction depth to 5 so that Pakala does not consider any complicated changes to the contract's state.
+Sending multiple transactions involves setting up the contract's long-term memory a certain way to execute an attack.
+The \code{-z} flag disabled concretization of symbolic values which helped to cut back the analysis time.
+The goal is to get through as many contracts as possible in the limited time available, so we enforce these strict parameters so the scanner does not hang on any one contract for too long.
+
+The JSON of bytecodes was split into 6 parts and the scanner was run in 6 different processes on multiple computers in order to make a dent in the massive amount of contracts we scraped.
+The scanner was simply a python script that opened new processes for each bytecode in the JSON.
+When a Pakala process terminates, everything that was sent to its \code{stdout} gets appended as a new line to an output file.
+Each line of the output is marked with its offset into the JSON for convenient lookup later.
+To locate an identified bug, all you would have to do is open one of the output files for a scanner, and do a search for the string \code{"Bug"} because Pakala prints "Bug Detected!" on discovering a vulnerability.
+The following shows the code for a single scanner feeding on one of the JSON files using python subprocesses to fork instances of Pakala.
+\lstinputlisting[language=Python, basicstyle=\small]{scan.py}
+
+After running for 24 hours, the scanners burned through 10887 contracts and detected 31 that were vulnerable.
+One vulnerable contract at the address \code{0x70025b7a4eC0baF3aE48352FAe41c81B62ee992E} with a balance of 0.51778 Ethereum was detected to have a self destruct bug.
+The Pakala output shows:\\
+
+\begin{lstlisting}[basicstyle=\small]
+Symbolic execution finished with coverage 100%.
+Outcomes: 84 interesting. 346 total and 0 
+ unfinished paths.
+
+Starting analysis step...
+Loaded 10 storage slots from the contract 
+ (non-exhaustive). 0 non-zero.
+
+Found selfdestruct bug.
+Path:
+
+Transaction 1, symbolic state:
+{
+"selfdestruct_to": None,
+"calls": [[<BV256 0x20>,
+  <BV256 0x60>,
+  <BV256 0x24>,
+  <BV256 0x60>,
+  <BV256 0x0>,
+  <BV256 0xffffffffffffffffffffffffffffffffffffffff 
+    & calldata[0]_608_256[223:0] .. 
+    calldata[32]_609_32>,
+  <BV256 gas_601_256 - 0x61da>]],
+"storage_written": {<BV256 0x1>: 
+    <BV256 calldata[36]_610_256>, 
+    <BV256 0x0>: <BV256 calldata[0]_608_256[223:0] .. 
+    calldata[32]_609_32 & 
+    storage[<BV256 0x0>]_617_256>},
+"storage_read": {<BV256 0x0>: 
+    <BV256 storage[<BV256 0x0>]_617_256>},
+"env": {'balance': <BV256 0x128dfa6a90b28000>,
+ 'caller': 
+    <BV256 0xcafebabefffffffff0202fffffffff7cff7247c9>,
+ 'value': <BV256 value_600_256>},
+"solver": {'constraints': [<Bool !calldata_size_604_256 == 0x0>,
+   <Bool calldata[0]_608_256[255:224] == 0x7948f523>,
+   <Bool storage[<BV256 0x0>]_617_256[159:0] == 0x0>,
+   <Bool calldata[32]_609_32 == 0xff7247c9>,
+   <Bool calldata[0]_608_256[127:0] == 0xcafebabefffffffff0202fffffffff7c>,
+   <Bool CALL_RETURN[<BV256 0xfffffffffffffffff & 
+   calldata[0]_12_256[223:0] .. 
+   calldata[32]_14_32>]_26_256[159:0] == 
+    0xdeadbeef00000000000000000000000000000000>],
+ 'hashes': {}},
+}
+\end{lstlisting}
+
+Pakala works by identifying all branch instructions in the bytecode and generates symbolic expressions that satisfy the constraints of all indirect jumps.
+The point of this is to maximize coverage of the subject contract by hitting as many distinct paths of the control flow graph as feasible with the allotted timeouts.
+At each possible state of the contract, Pakala checks if it is possible for a caller's balance to be greater than it was before calling the contract.
+This invariant check being true implies that the caller was able to send an input to the contract that transferred funds into the caller's account.
+
+As seen in the result above, Pakala was able to cover 100\% of paths in this contract and found a self-destruct bug.
+This means that it found one path where it was able to call the self-destruct function on the contract which forwards all remaining funds to the caller before disabling the contract completely.
+Pakala uses the Z3~\cite{z3} SMT solver to obtain concrete values from the symbolic state that triggered this bug.
+In this case, the concrete state tells us what bytes the \code{calldata} data structure should contain at various indices in order to trigger this bug.
+The \code{storage\_read} and \code{storage\_written} fields tell us that the contract's blockchain state must also be set up in a particular way.
+We can experimentally verify this self-destruct exploit if we can send a transaction with this exact state to the contract
+
+Unfortunately, Remix does not support interacting with bytecode contracts, so it is difficult to dynamically analyze what is going on at each instruction of the code.
+This makes it infeasible to attempt exploiting this vulnerability, or any of the other vulnerabilities reported by Pakala unless we blindly send transactions to the actual contracts on the Ethereum network.
+There exist EVM disassemblers for seeing what the instructions of a contract are, but there are no emulators or debuggers that allow a developer to step through instructions and monitor the program state.
+The closest thing to an emulator is the actual code that is run by the Ethereum mining software when executing a contract for a block.
+Parity's \code{evmbin} is a compiled Rust binary that implements the real EVM by taking bytecode and outputting all the instructions along with the EVM state at each program counter.
+This state includes the current gas limit, stack, storage, and local memory values.
+It may be possible to use this \code{evmbin} library as a base for writing an EVM emulator or debugger that could then allow us to construct the exploits previously mentioned.
+
+
+
+
+
+

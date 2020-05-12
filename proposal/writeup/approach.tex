@@ -1,6 +1,6 @@
 \section{Initial Approach}
 
-The current plan was to use Manticore~\cite{manticore}, a symbolic execution engine that supports EVM bytecode (and other architectures) to maximize code coverage on smart contracts sampled from Etherscan~\cite{etherscan}.
+The plan was to use Manticore~\cite{manticore}, a symbolic execution engine that supports EVM bytecode (and other architectures) to maximize code coverage on smart contracts sampled from Etherscan~\cite{etherscan}.
 Manticore can simulate the EVM as well as simulate an entire "Ethereum world" where a contract may call on other contracts.
 One advantage is that this analysis can be done without any real Ethereum coin because Manticore can set arbitrary amounts for contracts and wallets you define in the API.
 
@@ -12,5 +12,25 @@ The collected smart contracts will also be analyzed for semantic bugs after read
 One difficulty in the approach may be dealing with all the versions of Solidity being used in the wild.
 Solidity is constantly being patched which causes smart contract writers to be slow in keeping up.
 Manticore fully supports Solidity versions pre-0.5.0 so we will have to scrape contracts using Solidity 0.4 and older.
+
+Once a vulnerabilitiy is found, it will be tested on an online Ethereum development environment called Remix~\cite{remix}.
+Remix makes it simple to write Solidity code, compile it into bytecode, and interact with the Ethereum test networks.
+The user can also set a blockchain state to force the contract to execute under arbitrary parameters.
+\section{Approach}
+After some more reconnaisannce, it turned out that most contracts on Etherscan are actually honeypot contracts.
+Honeypot contracts look vulnerable but actually have some hidden state that is difficult to discern at a first glance, and can thus trick malicious actors into sending it money.
+We take a look at some of these, but we also expand our scope to contracts that are not shown on Etherscan.
+
+Etherscan shows the last five hundred verified contracts on the blockchain, meaning that the owner publicly published what they claim is the source.
+Given that the blockchain is always moving with nearly a million transactions a day, there are vastly more contracts than the ones shown on Etherscan.
+The issue is that Manticore does not support execution on bytecode.
+Most of the contracts on the blockchain do not have verified source code and are only visible as the EVM bytecode they were compiled as.
+Moreover, there is little incentive to analyze verified source code contracts if most of them are honeypots.
+We used a tool Pakala~\cite{pakala} that does symbolic execution on EVM bytecode instead of Manticore to look for vulnerable contracts.
+This method allowed us to perform mass scanning of bytecode so we could try to hit as many contracts as possible for common vulnerabilities.
+Another tool we explored is called Echidna~\cite{echidna} which does fuzzing of smart contracts in order to violate assertions made by a user in order to see how one might test their smart contract before deploying it.
+
+
+
 
 
