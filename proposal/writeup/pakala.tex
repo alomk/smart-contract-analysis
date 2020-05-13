@@ -6,10 +6,11 @@ Fortunately, there are public Google Cloud datasets for many popular cryptocurre
 We decided to extract and scan contracts that have non zero balances using the following SQL query: 
 \begin{lstlisting}[language=SQL, basicstyle=\small]
 Select A.*, B.eth_balance 
-from 'bigquery-public-data.crypto_ethereum.contracts' 
+from 'bigquery-public-data.ethereum.contracts' 
 A inner join 
-'bigquery-public-data.crypto_ethereum.balances' 
-B on A.address = B.address where B.eth_balance > 0
+'bigquery-public-data.ethereum.balances' 
+B on A.address = B.address 
+where B.eth_balance > 0
 \end{lstlisting}
 This query returned $473594$ smart contracts with non-zero balance which ended up being about 2 GB worth of JSON.
 
@@ -60,30 +61,35 @@ Transaction 1, symbolic state:
   <BV256 0x24>,
   <BV256 0x60>,
   <BV256 0x0>,
-  <BV256 0xffffffffffffffffffffffffffffffffffffffff 
+  <BV256 0xffffffffffffffffffffffffffffffffffff 
     & calldata[0]_608_256[223:0] .. 
     calldata[32]_609_32>,
   <BV256 gas_601_256 - 0x61da>]],
 "storage_written": {<BV256 0x1>: 
     <BV256 calldata[36]_610_256>, 
-    <BV256 0x0>: <BV256 calldata[0]_608_256[223:0] .. 
+    <BV256 0x0>: 
+    <BV256 calldata[0]_608_256[223:0] .. 
     calldata[32]_609_32 & 
     storage[<BV256 0x0>]_617_256>},
 "storage_read": {<BV256 0x0>: 
     <BV256 storage[<BV256 0x0>]_617_256>},
 "env": {'balance': <BV256 0x128dfa6a90b28000>,
  'caller': 
-    <BV256 0xcafebabefffffffff0202fffffffff7cff7247c9>,
+   <BV256 0xcafebabeffff0202fffffffff7cff7247c9>,
  'value': <BV256 value_600_256>},
-"solver": {'constraints': [<Bool !calldata_size_604_256 == 0x0>,
-   <Bool calldata[0]_608_256[255:224] == 0x7948f523>,
-   <Bool storage[<BV256 0x0>]_617_256[159:0] == 0x0>,
+"solver": {'constraints': [
+   <Bool !calldata_size_604_256 == 0x0>,
+   <Bool calldata[0]_608_256[255:224] 
+        == 0x7948f523>,
+   <Bool storage[<BV256 0x0>]_617_256[159:0] 
+            == 0x0>,
    <Bool calldata[32]_609_32 == 0xff7247c9>,
-   <Bool calldata[0]_608_256[127:0] == 0xcafebabefffffffff0202fffffffff7c>,
-   <Bool CALL_RETURN[<BV256 0xfffffffffffffffff & 
+   <Bool calldata[0]_608_256[127:0] 
+   == 0xcafebabefffffffff0202fffffffff7c>,
+   <Bool CALL_RETURN[<BV256 0xffffffffffffff & 
    calldata[0]_12_256[223:0] .. 
    calldata[32]_14_32>]_26_256[159:0] == 
-    0xdeadbeef00000000000000000000000000000000>],
+    0xdeadbeef00000000000000000000000000000>],
  'hashes': {}},
 }
 \end{lstlisting}
