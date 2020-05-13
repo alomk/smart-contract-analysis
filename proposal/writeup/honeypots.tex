@@ -1,2 +1,48 @@
-\section{Honeypot Contracts}
+\section{Exploits and Honeypot Contracts}
+On our quest to find vulnerable contracts on the main-net, we often stumbled on something called `Honeypot Contracts'. These are pretentious Ethereum smart contracts that have been deliberately constructed to look vulnerable to the unsophisticated eye, deployed with the malicious intent of fooling an attacker into spending coins. Consider the following \href{https://etherscan.io/address/0x741f1923974464efd0aa70e77800ba5d9ed18902#code}{OpenAddressLottery} contract as an example (code truncated):
+\begin{lstlisting}[basicstyle=\small]
+contract OpenAddressLottery{
+    address owner; 
+    uint private secretSeed; 
+    uint private lastReseed;
+    uint LuckyNumber = 7;
+    
+    function forceReseed() {
+        require(msg.sender==owner);
+        
+        SeedComponents s;
+        s.component1 = uint(msg.sender);
+        s.component2 = uint256(blockhash..));
+        s.component3 = block.difficulty*(..);
+        s.component4 = tx.gasprice * 7;
+        
+        reseed(s); //reseed
+    }
+}
+\end{lstlisting}
+Of course, running lotteries on the blockchain is painstakingly hard, as there is no trusted source of randomness. In this particular case, the winner is decided by checking if the combined hash of a number of block variables and sender address equal the \code{LuckyNumber} 7. An unsuspecting attacker can deploy another contract that evaluates the number on the current block and participates in the lottery only if it happens to be 7. However, the lucky number unexpectedly changes to an unaittanable value when the owner calls \code{forceReseed} since structs in solidity are defined in storage at pointer 0, by default and overwrite the contract variables (Note how cleverly the owner address remains unchanged). In order to make the contract look vulnerable, the creator has also `hacked' it using another account, before reseeding.\\
+\\
+Honeypots like these can be avoided if one goes through the pain of reproducing all the past transactions locally. However, some other notorious contracts may only be avoided if one has access to the whole blockchain locally, for example by running a node. For example, the clever \code{CashOut} function of \href{https://etherscan.io/address/0x95d34980095380851902ccd9a1fb4c813c2cb639#code}{Private Bank} contract that has appeared in many incarnations and tricked many \cite{reddit}, essentially reverts some of the internal contract calls when subject to re-entrancy attacks. This is made possible by linking an external `logging' contract, since etherscan does not veify the bytecode of linked addresses.\\
+\\
+In our work, we were able to produce a re-entrancy \href{https://ropsten.etherscan.io/address/0x79a03b08668477464d488256c5b48552df1f2968#code}{exploit} to the \href{https://etherscan.io/address/0x09746c14f8c98f225491bb5f93bcea3b6db636fc}{CdBank} contract on the test-net, containing 20 ether. However, in order to check the exploit on the main-net as well, we need to fork locally from a node running on the network, which is an onerous task, given that third party nodes provide only limited access to past blocks.
+% \begin{lstlisting}[basicstyle=\small]
+% contract Private_Bank
+% {
+%     mapping (address => uint) public balances;
+%     uint public MinDeposit = 1 ether;
+%     Log TransferLog;
+%     function CashOut(uint _am)
+%     {
+%         if(_am<=balances[msg.sender])
+%         {
+            
+%             if(msg.sender.call.value(_am)())
+%             {
+%                 balances[msg.sender]-=_am;
+%                 TransferLog.AddMessage(...);
+%             }
+%         }
+%     }   
+% }
+% \end{lstlisting}
 
